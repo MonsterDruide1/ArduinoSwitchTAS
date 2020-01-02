@@ -66,27 +66,26 @@ public class Main implements Runnable {
 		return list.toArray(new String[0]);
 	}
 
-	CommPortIdentifier serialPortId;
-	Enumeration enumComm;
 	SerialPort serialPort;
 	OutputStream outputStream;
 	InputStream inputStream;
-	Boolean serialPortGeoeffnet = false;
+	Boolean serialPortOpen = false;
 	
     public void run(){
-        if (oeffneSerialPort(portName) != true)
+        if (openSerialPort(portName) != true)
         	return;
     }
     
-	boolean oeffneSerialPort(String portName)
+	boolean openSerialPort(String portName)
 	{
 		Boolean foundPort = false;
-		if (serialPortGeoeffnet != false) {
-			System.out.println("Serialport bereits geöffnet");
+		if (serialPortOpen != false) {
+			System.out.println("Serialport already open");
 			return false;
 		}
-		System.out.println("Öffne Serialport");
-		enumComm = CommPortIdentifier.getPortIdentifiers();
+		System.out.println("Opening Serialport...");
+		CommPortIdentifier serialPortId = null;
+		Enumeration enumComm = CommPortIdentifier.getPortIdentifiers();
 		while(enumComm.hasMoreElements()) {
 			serialPortId = (CommPortIdentifier) enumComm.nextElement();
 			if (portName.contentEquals(serialPortId.getName())) {
@@ -95,67 +94,67 @@ public class Main implements Runnable {
 			}
 		}
 		if (foundPort != true) {
-			System.out.println("Serialport nicht gefunden: " + portName);
+			System.out.println("Serialport not found: " + portName);
 			return false;
 		}
 		try {
 			serialPort = (SerialPort) serialPortId.open("Öffnen und Senden", 500);
 		} catch (PortInUseException e) {
-			System.out.println("Port belegt");
+			System.out.println("Port occupied");
 		}
 		try {
 			outputStream = serialPort.getOutputStream();
 		} catch (IOException e) {
-			System.out.println("Keinen Zugriff auf OutputStream");
+			System.out.println("Can't access OutputStream");
 		}
 
 		try {
 			inputStream = serialPort.getInputStream();
 		} catch (IOException e) {
-			System.out.println("Keinen Zugriff auf InputStream");
+			System.out.println("Can't access InputStream");
 		}
 		try {
 			serialPort.addEventListener(new serialPortEventListener());
 		} catch (TooManyListenersException e) {
-			System.out.println("TooManyListenersException für Serialport");
+			System.out.println("TooManyListenersException for Serialport");
 		}
 		serialPort.notifyOnDataAvailable(true);
 
 		try {
 			serialPort.setSerialPortParams(115200, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
 		} catch(UnsupportedCommOperationException e) {
-			System.out.println("Konnte Schnittstellen-Paramter nicht setzen");
+			System.out.println("Couldn't set params");
 		}
 		
-		serialPortGeoeffnet = true;
+		serialPortOpen = true;
 		System.out.println("DONE!");
 		return true;
 	}
 
-	void schliesseSerialPort()
+	void closeSerialPort()
 	{
-		if ( serialPortGeoeffnet == true) {
-			System.out.println("Schließe Serialport");
+		if (serialPortOpen == true) {
+			System.out.println("Closing Serialport...");
 			serialPort.close();
-			serialPortGeoeffnet = false;
+			serialPortOpen = false;
 		} else {
-			System.out.println("Serialport bereits geschlossen");
+			System.out.println("Serialport already closed");
 		}
 	}
 	
-	void sendeSerialPort(String nachricht)
+	void sendSerialPort(String message)
 	{
-		if (serialPortGeoeffnet != true)
+		if (serialPortOpen != true)
 			return;
 		try {
-			outputStream.write(nachricht.getBytes());
+			outputStream.write(message.getBytes());
 			outputStream.flush();
 		} catch (IOException e) {
-			System.out.println("Fehler beim Senden");
+			System.out.println("Error while sending message");
 		}
 	}
 	
-	void serialPortDatenVerfuegbar() {
+	void readSerialPort() {
 		try {
 			byte[] data = new byte[150];
 			int num;
@@ -164,7 +163,7 @@ public class Main implements Runnable {
 				String received = new String(data, 0, num).trim();
 				if(received.contains("1")) {
 					System.out.println("Requested new entry: "+received);
-					sendeSerialPort(entries[i]+"\n");
+					sendSerialPort(entries[i]+"\n");
 					i++;
 				}
 				if(received.contains("START")) {
@@ -172,11 +171,11 @@ public class Main implements Runnable {
 					System.out.println("RESET: "+received);
 				}
 				else {
-					System.out.println("Empfange: "+ received);
+					System.out.println("Receiving: "+ received);
 				}
 			}
 		} catch (IOException e) {
-			System.out.println("Fehler beim Lesen empfangener Daten");
+			System.out.println("Error while reading received data");
 		}
 	}
 	
@@ -184,7 +183,7 @@ public class Main implements Runnable {
 		public void serialEvent(SerialPortEvent event) {
 			switch (event.getEventType()) {
 			case SerialPortEvent.DATA_AVAILABLE:
-				serialPortDatenVerfuegbar();
+				readSerialPort();
 				break;
 			case SerialPortEvent.BI:
 			case SerialPortEvent.CD:
