@@ -1,33 +1,46 @@
-## snowball thrower
+## ArduinoSwitchTAS
 
-Automatically throws snowballs in The Legend of Zelda: Breath of the Wild by emulating a controller on a Teensy++ v2.0
-
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/udo8mv5oarg/0.jpg)](https://www.youtube.com/watch?v=udo8mv5oarg)
-
-A full writeup is [here](https://medium.com/@bertrandom/automating-zelda-3b37127e24c8).
+This project should emulate a controller with the Arduino and play TAS on the Nintendo Switch.
 
 #### How to use
 
-Walk up to Pondo until the **(A) Talk** option is available and plug in the controller. It will automatically sync with the console, initiate the bowling game with Pondo, throw a perfect strike, and end the bowling game. It will play the bowling game in a loop.
+Besides the Arduino you also need an UART to USB-Bridge. [This one](https://www.amazon.de/USB-TTL-Konverter-Modul-mit-eingebautem-CP2102/dp/B00AFRXKFU/) from Amazon works for me.
 
-Note that due to certain weather conditions, Link will sometimes fail to throw a strike, causing the game to enter into a mode where Link has to throw again. Thanks to a [change by exsilium](https://github.com/bertrandom/snowball-thrower/pull/1), the loop will recover from this, given enough time. I've tested this running for over 24 hours.
+You only need to connect TX to TX and RX to RX. Normally, you connect TX to RX, but we are using the ATmega16u2 in the Arduino, which inverses TX and RX.
+
+After connecting the bridge to your PC, you need to check, which COM-Port it uses. Go into your "Device Manager" and check below "COM & LPT" for "Silicon Labs CP210x USB to UART Bridge (COM?)" (for my device, linked above). That ? after COM is your needed COM port. Insert it into the "portName" in the Main.java of "ArduinoTAS".
 
 In case you see issues with controller conflicts while in docked mode, try using a USB-C to USB-A adapter in handheld mode. In dock mode, changes in the HDMI connection will briefly make the Switch not respond to incoming USB commands, skipping parts of the sequence. These changes may include turning off the TV, or switching the HDMI input. (Switching to the internal tuner will be OK, if this doesn't trigger a change in the HDMI input.)
 
-This repository has been tested using a Teensy 2.0++.
+This repository has been tested using an Arduino Uno.
 
-#### Compiling and Flashing onto the Teensy 2.0++
-Go to the Teensy website and download/install the [Teensy Loader application](https://www.pjrc.com/teensy/loader.html). For Linux, follow their instructions for installing the [GCC Compiler and Tools](https://www.pjrc.com/teensy/gcc.html). For Windows, you will need the [latest AVR toolchain](http://www.atmel.com/tools/atmelavrtoolchainforwindows.aspx) from the Atmel site. See [this issue](https://github.com/LightningStalker/Splatmeme-Printer/issues/10) and [this thread](http://gbatemp.net/threads/how-to-use-shinyquagsires-splatoon-2-post-printer.479497/) on GBAtemp for more information. (Note for Mac users - the AVR MacPack is now called AVR CrossPack. If that does not work, you can try installing `avr-gcc` with `brew`.)
+#### Compiling this Project
 
-LUFA has been included as a git submodule, so cloning the repo like this:
+First of all, you need a Linux VM (for example in [VirtualBox](https://www.virtualbox.org/), tested with Ubuntu). Here you need to install the [ArduinoIDE](https://www.arduino.cc/download_handler.php?f=/arduino-1.8.10-linux64.tar.xz) and make. Next, you edit the makefile and insert your installation dir at ARDUINO_PATH (keep the additions at the end to let it point to the correct dir).
 
-```
-git clone --recursive git@github.com:bertrandom/snowball-thrower.git
-```
+After every restart of the Linux VM you need to extend the $PATH-Variable by running the following command: `sudo export $PATH=(your ArduinoIDE-Installation-dir)/hardware/tools/avr/bin/:$PATH` (also look if it points to an existing directory).
 
-will put LUFA in the right directory.
+Now you should be ready to rock. Open a terminal window in the `Arduino`-subdirectory, type `make`, and hit enter to compile. If all goes well, the printout in the terminal will let you know it finished the build! Follow the directions on flashing `Joystick.hex` onto your Arduino, which can be found below.
 
-Now you should be ready to rock. Open a terminal window in the `snowball-thrower` directory, type `make`, and hit enter to compile. If all goes well, the printout in the terminal will let you know it finished the build! Follow the directions on flashing `Joystick.hex` onto your Teensy, which can be found page where you downloaded the Teensy Loader application.
+#### Flashing it onto the Arduino Uno
+
+You need the program called `Flip` on your Windows PC to flash the compiled `Joystick.hex` file onto your Arduino. You can download it (here)[https://www.microchip.com/developmenttools/ProductDetails/flip].
+
+Before flashing, you always need to disconnect your TX and RX-Pins.
+
+First you need to put your Arduino in DFU-Mode while it's connected to your PC. To do that, follow the image below:
+
+[![Short the pins in the red circle](http://1.bp.blogspot.com/-jMM85F4r6ww/T8u-74eiNkI/AAAAAAAAGZ0/EWa0TdA26A4/s1600/DFU_mode_pins.png)](https://forum.arduino.cc/index.php?topic=380103.0)
+
+If it's the first time for your PC to be connected to an Arduino in DFU-Mode, you need to follow (these)[https://youtu.be/fSXZMVdO5Sg?t=322] instructions to connect the Arduino to FLIP.
+
+In Flip, first select `ATmega16u2` in Device -> Select and press OK. After that, go into File -> Load HEX File and search for `Joystick.hex` you compiled earlier. Then press on the USB-cable in the top menu and select USB, then press Open. Now you are ready to flash!
+
+Select Run in the bottom left corner to flash the .hex file onto the Arduino. When done, disconnect the Arduino from your computer and reconnect the TX & RX-Pins to the bridge.
+
+#### Run
+
+To start a TAS file, first start the ArduinoTAS-Project from Eclipse and select the TAS file you want to run. Make sure your `portName` in `Main.java` is correct and the pins of TX & RX on your Arduino are connected correctly. Then connect your Arduino via USB to the Switch and see the magic happen!
 
 #### Thanks
 
